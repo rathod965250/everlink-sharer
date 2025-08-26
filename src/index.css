@@ -17,8 +17,18 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
 
-    --primary: 222.2 47.4% 11.2%;
+    --primary: 270 95% 60%;
     --primary-foreground: 210 40% 98%;
+    
+    /* Link shortener brand colors */
+    --brand: 270 95% 60%;
+    --brand-foreground: 210 40% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 210 40% 98%;
+    
+    /* Gradients for visual appeal */
+    --gradient-brand: linear-gradient(135deg, hsl(270 95% 60%), hsl(280 85% 65%));
+    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(220 14% 96%));
 
     --secondary: 210 40% 96.1%;
     --secondary-foreground: 222.2 47.4% 11.2%;
@@ -65,8 +75,16 @@ All colors MUST be HSL.
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 270 95% 60%;
+    --primary-foreground: 210 40% 98%;
+    
+    --brand: 270 95% 60%;
+    --brand-foreground: 210 40% 98%;
+    --success: 142 76% 36%;
+    --success-foreground: 210 40% 98%;
+    
+    --gradient-brand: linear-gradient(135deg, hsl(270 95% 60%), hsl(280 85% 65%));
+    --gradient-card: linear-gradient(135deg, hsl(222.2 84% 4.9%), hsl(217.2 32.6% 17.5%));
 
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
