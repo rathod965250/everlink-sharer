@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export const LinkShortener = () => {
   const [url, setUrl] = useState("");
+  const [customAlias, setCustomAlias] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [copied, setCopied] = useState(false);
@@ -53,23 +54,58 @@ export const LinkShortener = () => {
     setIsLoading(true);
     
     try {
-      let shortCode = generateShortCode();
+      let shortCode;
       
-      // Check if short code already exists, regenerate if needed
-      let { data: existing } = await supabase
-        .from('links')
-        .select('short_code')
-        .eq('short_code', shortCode)
-        .single();
-      
-      while (existing) {
+      if (customAlias.trim()) {
+        // Validate custom alias
+        if (!/^[A-Za-z0-9_-]+$/.test(customAlias)) {
+          toast({
+            title: "Invalid alias",
+            description: "Alias can only contain letters, numbers, hyphens, and underscores",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check if custom alias already exists
+        const { data: existing } = await supabase
+          .from('links')
+          .select('short_code')
+          .eq('short_code', customAlias)
+          .single();
+          
+        if (existing) {
+          toast({
+            title: "Alias already taken",
+            description: "This custom alias is already in use. Please choose another one.",
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        shortCode = customAlias;
+      } else {
+        // Generate random short code
         shortCode = generateShortCode();
-        const { data: newExisting } = await supabase
+        
+        // Check if short code already exists, regenerate if needed
+        let { data: existing } = await supabase
           .from('links')
           .select('short_code')
           .eq('short_code', shortCode)
           .single();
-        existing = newExisting;
+        
+        while (existing) {
+          shortCode = generateShortCode();
+          const { data: newExisting } = await supabase
+            .from('links')
+            .select('short_code')
+            .eq('short_code', shortCode)
+            .single();
+          existing = newExisting;
+        }
       }
 
       const { data, error } = await supabase
@@ -138,22 +174,37 @@ export const LinkShortener = () => {
         </CardHeader>
         
         <CardContent className="space-y-6">
-          <div className="flex gap-2">
-            <Input
-              type="url"
-              placeholder="Enter your long URL here..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 h-12 text-base"
-              onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
-            />
-            <Button
-              onClick={shortenLink}
-              disabled={isLoading}
-              className="h-12 px-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
-            >
-              {isLoading ? "Shortening..." : "Shorten"}
-            </Button>
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="Enter your long URL here..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="flex-1 h-12 text-base"
+                onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
+              />
+              <Button
+                onClick={shortenLink}
+                disabled={isLoading}
+                className="h-12 px-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
+              >
+                {isLoading ? "Shortening..." : "Shorten"}
+              </Button>
+            </div>
+            
+            <div className="space-y-2">
+              <Input
+                type="text"
+                placeholder="Custom alias (optional) - e.g., myblog"
+                value={customAlias}
+                onChange={(e) => setCustomAlias(e.target.value)}
+                className="h-10 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for a random 6-character code, or enter your own custom alias
+              </p>
+            </div>
           </div>
 
           {shortenedUrl && (
