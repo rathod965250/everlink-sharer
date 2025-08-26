@@ -23,7 +23,7 @@ export const LinkRedirect = () => {
         // Get the original URL
         const { data: link, error } = await supabase
           .from('links')
-          .select('original_url')
+          .select('original_url, clicks')
           .eq('short_code', code)
           .single();
 
@@ -34,7 +34,10 @@ export const LinkRedirect = () => {
         }
 
         // Increment click count
-        await supabase.rpc('increment_clicks', { short_code: code });
+        await supabase
+          .from('links')
+          .update({ clicks: (link.clicks || 0) + 1 })
+          .eq('short_code', code);
 
         setOriginalUrl(link.original_url);
         
