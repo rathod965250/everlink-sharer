@@ -21,6 +21,7 @@ export type Database = {
           id: string
           original_url: string
           short_code: string
+          user_id: string | null
         }
         Insert: {
           clicks?: number
@@ -28,6 +29,7 @@ export type Database = {
           id?: string
           original_url: string
           short_code: string
+          user_id?: string | null
         }
         Update: {
           clicks?: number
@@ -35,6 +37,28 @@ export type Database = {
           id?: string
           original_url?: string
           short_code?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          user_id?: string
         }
         Relationships: []
       }
