@@ -1,10 +1,14 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { BarChart3, ExternalLink, Calendar, MousePointer } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ExternalLink, BarChart3, Link, ArrowLeft, Trash2, User, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 
 interface LinkData {
   id: string;
@@ -14,110 +18,203 @@ interface LinkData {
   created_at: string;
 }
 
-export default function Analytics() {
+const Analytics = () => {
   const [links, setLinks] = useState<LinkData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [totalClicks, setTotalClicks] = useState(0);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchAnalytics();
-  }, []);
+  }, [user]);
 
   const fetchAnalytics = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('links')
         .select('*')
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching analytics:', error);
+        return;
+      }
 
       setLinks(data || []);
-      setTotalClicks(data?.reduce((sum, link) => sum + link.clicks, 0) || 0);
+      
+      // Calculate total clicks
+      const total = (data || []).reduce((sum, link) => sum + link.clicks, 0);
+      setTotalClicks(total);
+      
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      console.error('Error:', error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
+  };
+
+  const deleteLink = async (id: string) => {
+    const { error } = await supabase
+      .from('links')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete link",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Success",
+      description: "Link deleted successfully",
+    });
+
+    // Refresh the data
+    fetchAnalytics();
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+    toast({
+      title: "Signed out",
+      description: "You've been signed out successfully.",
+    });
   };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric',
+      day: 'numeric'
     });
   };
 
-  const truncateUrl = (url: string, maxLength: number = 40) => {
+  const truncateUrl = (url: string, maxLength: number = 50) => {
     return url.length > maxLength ? url.substring(0, maxLength) + '...' : url;
   };
 
-  if (isLoading) {
+  if (loading) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="animate-pulse space-y-6">
-            <div className="h-8 bg-muted rounded w-64"></div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-muted rounded"></div>
-              ))}
-            </div>
-            <div className="h-96 bg-muted rounded"></div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 p-4">
+        <div className="max-w-6xl mx-auto space-y-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-6 w-16" />
+            <Skeleton className="h-8 w-48" />
           </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="pb-3">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-8 w-16" />
+                </CardHeader>
+              </Card>
+            ))}
+          </div>
+          
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-32" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 p-4">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            Analytics Dashboard
-          </h1>
-          <p className="text-muted-foreground">
-            Track the performance of your shortened links
-          </p>
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => navigate('/')}
+              className="gap-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back
+            </Button>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-6 w-6 text-primary" />
+              <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="h-4 w-4" />
+              <span>{user?.email}</span>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+            <Badge variant="secondary" className="text-sm">
+              Real-time data
+            </Badge>
+          </div>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-sm font-medium">Total Links</CardTitle>
-              <BarChart3 className="h-4 w-4 text-muted-foreground" />
+              <Link className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{links.length}</div>
+              <div className="text-2xl font-bold text-primary">{links.length}</div>
               <p className="text-xs text-muted-foreground">
-                Links created
+                Shortened links created
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-sm font-medium">Total Clicks</CardTitle>
-              <MousePointer className="h-4 w-4 text-muted-foreground" />
+              <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{totalClicks}</div>
+              <div className="text-2xl font-bold text-primary">{totalClicks}</div>
               <p className="text-xs text-muted-foreground">
-                Across all links
+                Across all your links
               </p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <Card className="border-primary/20">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
               <CardTitle className="text-sm font-medium">Average Clicks</CardTitle>
               <BarChart3 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
+              <div className="text-2xl font-bold text-primary">
                 {links.length > 0 ? Math.round(totalClicks / links.length) : 0}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -128,27 +225,31 @@ export default function Analytics() {
         </div>
 
         {/* Links Table */}
-        <Card>
+        <Card className="border-primary/20">
           <CardHeader>
-            <CardTitle>All Links</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <Link className="h-5 w-5" />
+              Your Shortened Links
+            </CardTitle>
             <CardDescription>
-              Detailed view of all your shortened links and their performance
+              Manage and track the performance of all your shortened links
             </CardDescription>
           </CardHeader>
           <CardContent>
             {links.length === 0 ? (
               <div className="text-center py-12">
-                <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground/50" />
-                <h3 className="mt-4 text-lg font-semibold">No links yet</h3>
-                <p className="text-muted-foreground">
-                  Create your first shortened link to see analytics here.
+                <Link className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No links yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  You haven't created any shortened links yet. Start by creating your first link!
                 </p>
-                <Button asChild className="mt-4">
-                  <a href="/">Create Link</a>
+                <Button onClick={() => navigate('/')} className="gap-2">
+                  <Link className="h-4 w-4" />
+                  Create Link
                 </Button>
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="rounded-md border">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -162,45 +263,55 @@ export default function Analytics() {
                   <TableBody>
                     {links.map((link) => (
                       <TableRow key={link.id}>
-                        <TableCell className="font-medium">
-                          <code className="text-sm bg-muted px-2 py-1 rounded">
-                            /{link.short_code}
-                          </code>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Link className="h-4 w-4 text-muted-foreground" />
+                            <a 
+                              href={`/${link.short_code}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {window.location.origin}/{link.short_code}
+                            </a>
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <span title={link.original_url}>
+                          <div className="max-w-xs">
+                            <span className="text-sm text-muted-foreground truncate block">
                               {truncateUrl(link.original_url)}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={link.clicks > 0 ? "default" : "secondary"}>
-                            {link.clicks} clicks
+                          <Badge variant="secondary" className="font-mono">
+                            {link.clicks}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="h-3 w-3" />
-                            <span>{formatDate(link.created_at)}</span>
-                          </div>
+                          {formatDate(link.created_at)}
                         </TableCell>
                         <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            asChild
-                          >
-                            <a
-                              href={`/${link.short_code}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex items-center space-x-1"
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => window.open(`/${link.short_code}`, '_blank')}
+                              className="gap-2 h-8"
                             >
                               <ExternalLink className="h-3 w-3" />
-                              <span>Visit</span>
-                            </a>
-                          </Button>
+                              Visit
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteLink(link.id)}
+                              className="gap-2 h-8 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                              Delete
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -213,4 +324,6 @@ export default function Analytics() {
       </div>
     </div>
   );
-}
+};
+
+export default Analytics;

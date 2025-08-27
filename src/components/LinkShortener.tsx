@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Copy, Check, TrendingUp } from "lucide-react";
+import { Link2, Copy, Check, TrendingUp, User, LogOut, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useNavigate } from "react-router-dom";
 
 export const LinkShortener = () => {
   const [url, setUrl] = useState("");
@@ -13,6 +15,8 @@ export const LinkShortener = () => {
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   const generateShortCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -113,6 +117,7 @@ export const LinkShortener = () => {
         .insert({
           short_code: shortCode,
           original_url: url,
+          user_id: user?.id || null
         })
         .select()
         .single();
