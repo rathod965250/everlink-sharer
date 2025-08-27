@@ -2,11 +2,10 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Copy, Check, TrendingUp, User, LogOut, BarChart3 } from "lucide-react";
+import { Link2, Copy, Check, TrendingUp, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 
 export const LinkShortener = () => {
   const [url, setUrl] = useState("");
@@ -15,8 +14,7 @@ export const LinkShortener = () => {
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const generateShortCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -29,8 +27,8 @@ export const LinkShortener = () => {
 
   const isValidUrl = (string: string) => {
     try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
+      new URL(string);
+      return true;
     } catch (_) {
       return false;
     }
@@ -162,117 +160,105 @@ export const LinkShortener = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-6">
-      <Card className="bg-gradient-to-br from-card to-secondary/20 border-primary/20">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center">
-            <Link2 className="w-8 h-8 text-primary-foreground" />
+    <Card className="bg-gradient-to-br from-card to-secondary/20 border-primary/20">
+      <CardHeader className="text-center space-y-4">
+        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center">
+          <Link2 className="w-8 h-8 text-primary-foreground" />
+        </div>
+        <div className="space-y-2">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
+            Link Shortener
+          </CardTitle>
+          <CardDescription className="text-lg">
+            Transform your long URLs into short, memorable links that never expire
+          </CardDescription>
+        </div>
+      </CardHeader>
+      
+      <CardContent className="space-y-6">
+        <div className="space-y-4">
+          <div className="flex gap-2">
+            <Input
+              type="url"
+              placeholder="Enter your long URL here..."
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              className="flex-1 h-12 text-base"
+              onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
+            />
+            <Button
+              onClick={shortenLink}
+              disabled={isLoading}
+              className="h-12 px-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
+            >
+              {isLoading ? "Shortening..." : "Shorten"}
+            </Button>
           </div>
+          
           <div className="space-y-2">
-            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-              Link Shortener
-            </CardTitle>
-            <CardDescription className="text-lg">
-              Transform your long URLs into short, memorable links that never expire
-            </CardDescription>
+            <Input
+              type="text"
+              placeholder="Custom alias (optional) - e.g., myblog"
+              value={customAlias}
+              onChange={(e) => setCustomAlias(e.target.value)}
+              className="h-10 text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Leave empty for a random 6-character code, or enter your own custom alias
+            </p>
           </div>
-        </CardHeader>
-        
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input
-                type="url"
-                placeholder="Enter your long URL here..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                className="flex-1 h-12 text-base"
-                onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
-              />
-              <Button
-                onClick={shortenLink}
-                disabled={isLoading}
-                className="h-12 px-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
-              >
-                {isLoading ? "Shortening..." : "Shorten"}
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              <Input
-                type="text"
-                placeholder="Custom alias (optional) - e.g., myblog"
-                value={customAlias}
-                onChange={(e) => setCustomAlias(e.target.value)}
-                className="h-10 text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty for a random 6-character code, or enter your own custom alias
-              </p>
-            </div>
-          </div>
+        </div>
 
-          {shortenedUrl && (
-            <Card className="border-success/20 bg-success/5">
-              <CardContent className="pt-6">
-                <div className="space-y-3">
-                  <p className="text-sm font-medium text-success">
-                    ✨ Your shortened link is ready!
-                  </p>
-                  <div className="flex gap-2">
-                    <Input
-                      value={shortenedUrl}
-                      readOnly
-                      className="flex-1 bg-background border-success/20"
-                    />
-                    <Button
-                      onClick={copyToClipboard}
-                      variant="outline"
-                      className="border-success/20 hover:bg-success/10"
-                    >
-                      {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                  </div>
+        {shortenedUrl && (
+          <Card className="border-success/20 bg-success/5">
+            <CardContent className="pt-6">
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-success">
+                  ✨ Your shortened link is ready!
+                </p>
+                <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+                  <span className="flex-1 font-mono text-sm break-all">
+                    {shortenedUrl}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyToClipboard}
+                    className="gap-2 shrink-0"
+                  >
+                    {copied ? (
+                      <>
+                        <Check className="w-4 h-4 text-success" />
+                        Copied
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-      <Card className="border-primary/10">
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
-                <Link2 className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Never Expires</h3>
-              <p className="text-sm text-muted-foreground">
-                Your links stay active forever
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
-                <TrendingUp className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Track Clicks</h3>
-              <p className="text-sm text-muted-foreground">
-                Monitor your link performance
-              </p>
-            </div>
-            <div className="space-y-2">
-              <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center mx-auto">
-                <Check className="w-6 h-6 text-primary" />
-              </div>
-              <h3 className="font-semibold">Free Forever</h3>
-              <p className="text-sm text-muted-foreground">
-                No limits, no registration required
-              </p>
-            </div>
+        <div className="flex items-center justify-center gap-6 pt-4 border-t">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <TrendingUp className="w-4 h-4" />
+            <span>Free forever</span>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Check className="w-4 h-4" />
+            <span>No expiration</span>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <BarChart3 className="w-4 h-4" />
+            <span>Analytics included</span>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
