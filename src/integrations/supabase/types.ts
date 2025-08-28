@@ -18,6 +18,9 @@ export type Database = {
         Row: {
           clicks: number
           created_at: string
+          expiration_type: string | null
+          expiration_value: number | null
+          expires_at: string | null
           id: string
           original_url: string
           short_code: string
@@ -26,6 +29,9 @@ export type Database = {
         Insert: {
           clicks?: number
           created_at?: string
+          expiration_type?: string | null
+          expiration_value?: number | null
+          expires_at?: string | null
           id?: string
           original_url: string
           short_code: string
@@ -34,6 +40,9 @@ export type Database = {
         Update: {
           clicks?: number
           created_at?: string
+          expiration_type?: string | null
+          expiration_value?: number | null
+          expires_at?: string | null
           id?: string
           original_url?: string
           short_code?: string

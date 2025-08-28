@@ -1,20 +1,25 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Link2, Copy, Check, TrendingUp, BarChart3 } from "lucide-react";
+import { Link2, Copy, Check, TrendingUp, BarChart3, Zap, Shield, Clock, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
 
-export const LinkShortener = () => {
+interface LinkShortenerProps {
+  user?: any;
+}
+
+export const LinkShortener = ({ user }: LinkShortenerProps) => {
   const [url, setUrl] = useState("");
   const [customAlias, setCustomAlias] = useState("");
+  const [expirationValue, setExpirationValue] = useState(0);
+  const [expirationType, setExpirationType] = useState("never");
   const [isLoading, setIsLoading] = useState(false);
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [copied, setCopied] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const generateShortCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -31,6 +36,26 @@ export const LinkShortener = () => {
       return true;
     } catch (_) {
       return false;
+    }
+  };
+
+  const calculateExpirationDate = () => {
+    if (expirationType === 'never') return null;
+    
+    const now = new Date();
+    const value = parseInt(expirationValue.toString());
+    
+    switch (expirationType) {
+      case 'minutes':
+        return new Date(now.getTime() + value * 60 * 1000);
+      case 'hours':
+        return new Date(now.getTime() + value * 60 * 60 * 1000);
+      case 'days':
+        return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+      case 'months':
+        return new Date(now.setMonth(now.getMonth() + value));
+      default:
+        return null;
     }
   };
 
@@ -53,14 +78,23 @@ export const LinkShortener = () => {
       return;
     }
 
+    if (expirationType !== 'never' && (!expirationValue || expirationValue <= 0)) {
+      toast({
+        title: "Invalid expiration",
+        description: "Please enter a valid expiration value",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
       let shortCode;
       
       if (customAlias.trim()) {
-        // Validate custom alias
-        if (!/^[A-Za-z0-9_-]+$/.test(customAlias)) {
+        // Validate custom alias format
+        if (!/^[A-Za-z0-9_-]+$/.test(customAlias.trim())) {
           toast({
             title: "Invalid alias",
             description: "Alias can only contain letters, numbers, hyphens, and underscores",
@@ -74,7 +108,7 @@ export const LinkShortener = () => {
         const { data: existing } = await supabase
           .from('links')
           .select('short_code')
-          .eq('short_code', customAlias)
+          .eq('short_code', customAlias.trim())
           .single();
           
         if (existing) {
@@ -87,7 +121,7 @@ export const LinkShortener = () => {
           return;
         }
         
-        shortCode = customAlias;
+        shortCode = customAlias.trim();
       } else {
         // Generate random short code
         shortCode = generateShortCode();
@@ -110,12 +144,17 @@ export const LinkShortener = () => {
         }
       }
 
+      const expiresAt = calculateExpirationDate();
+
       const { data, error } = await supabase
         .from('links')
         .insert({
           short_code: shortCode,
           original_url: url,
-          user_id: user?.id || null
+          user_id: user?.id || null,
+          expires_at: expiresAt?.toISOString() || null,
+          expiration_type: expirationType,
+          expiration_value: expirationType === 'never' ? 0 : expirationValue
         })
         .select()
         .single();
@@ -126,8 +165,8 @@ export const LinkShortener = () => {
       setShortenedUrl(shortUrl);
       
       toast({
-        title: "Link shortened successfully!",
-        description: "Your shortened link is ready to use.",
+        title: "✨ Link shortened successfully!",
+        description: `Your Zagurl link is ready to use${expiresAt ? ` and expires in ${expirationValue} ${expirationType}` : ''}`,
       });
     } catch (error) {
       console.error('Error shortening link:', error);
@@ -160,105 +199,169 @@ export const LinkShortener = () => {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-card to-secondary/20 border-primary/20">
-      <CardHeader className="text-center space-y-4">
-        <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary/80 rounded-2xl flex items-center justify-center">
-          <Link2 className="w-8 h-8 text-primary-foreground" />
-        </div>
-        <div className="space-y-2">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent">
-            Link Shortener
-          </CardTitle>
-          <CardDescription className="text-lg">
-            Transform your long URLs into short, memorable links that never expire
-          </CardDescription>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <div className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              type="url"
-              placeholder="Enter your long URL here..."
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              className="flex-1 h-12 text-base"
-              onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
-            />
-            <Button
-              onClick={shortenLink}
-              disabled={isLoading}
-              className="h-12 px-6 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary/80"
-            >
-              {isLoading ? "Shortening..." : "Shorten"}
-            </Button>
-          </div>
-          
-          <div className="space-y-2">
-            <Input
-              type="text"
-              placeholder="Custom alias (optional) - e.g., myblog"
-              value={customAlias}
-              onChange={(e) => setCustomAlias(e.target.value)}
-              className="h-10 text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Leave empty for a random 6-character code, or enter your own custom alias
+    <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in">
+      {/* Hero Section */}
+      <div className="text-center space-y-6 py-8">
+        <div className="relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary-glow/20 to-primary/20 blur-3xl"></div>
+          <div className="relative space-y-4">
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
+              Zagurl
+            </h1>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto">
+              Transform your long URLs into <span className="text-primary font-semibold">short, memorable links</span> that never expire
             </p>
-          </div>
-        </div>
-
-        {shortenedUrl && (
-          <Card className="border-success/20 bg-success/5">
-            <CardContent className="pt-6">
-              <div className="space-y-3">
-                <p className="text-sm font-medium text-success">
-                  ✨ Your shortened link is ready!
-                </p>
-                <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
-                  <span className="flex-1 font-mono text-sm break-all">
-                    {shortenedUrl}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copyToClipboard}
-                    className="gap-2 shrink-0"
-                  >
-                    {copied ? (
-                      <>
-                        <Check className="w-4 h-4 text-success" />
-                        Copied
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy
-                      </>
-                    )}
-                  </Button>
-                </div>
+            <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-medium">
+              <div className="flex items-center gap-2 text-success">
+                <Zap className="h-5 w-5" />
+                <span>Lightning Fast</span>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        <div className="flex items-center justify-center gap-6 pt-4 border-t">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <TrendingUp className="w-4 h-4" />
-            <span>Free forever</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Check className="w-4 h-4" />
-            <span>No expiration</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <BarChart3 className="w-4 h-4" />
-            <span>Analytics included</span>
+              <div className="flex items-center gap-2 text-primary">
+                <Shield className="h-5 w-5" />
+                <span>Secure & Reliable</span>
+              </div>
+              <div className="flex items-center gap-2 text-accent-foreground">
+                <Sparkles className="h-5 w-5" />
+                <span>FREE Forever</span>
+              </div>
+            </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <Card className="bg-gradient-to-br from-card via-card to-secondary/20 border-primary/20 glow-effect hover-scale">
+        <CardHeader className="text-center space-y-4">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary-glow rounded-2xl flex items-center justify-center glow-effect">
+            <Link2 className="w-8 h-8 text-primary-foreground" />
+          </div>
+          <div className="space-y-2">
+            <CardTitle className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-transparent">
+              Get Your Free Link
+            </CardTitle>
+            <CardDescription className="text-lg">
+              No registration required • Custom aliases available • Analytics included
+            </CardDescription>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-6">
+          <div className="space-y-4">
+            <div className="flex gap-2">
+              <Input
+                type="url"
+                placeholder="Enter your long URL here..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                className="flex-1 h-12 text-base border-primary/20 focus:border-primary/40"
+                onKeyPress={(e) => e.key === 'Enter' && shortenLink()}
+              />
+              <Button
+                onClick={shortenLink}
+                disabled={isLoading}
+                className="h-12 px-8 bg-gradient-to-r from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 glow-effect"
+              >
+                {isLoading ? "Shortening..." : "Get My Link FREE"}
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Custom alias (optional) - e.g., myblog"
+                  value={customAlias}
+                  onChange={(e) => setCustomAlias(e.target.value)}
+                  className="h-10 text-sm border-primary/20 focus:border-primary/40"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Create a memorable custom alias or leave empty for auto-generation
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Select value={expirationType} onValueChange={setExpirationType}>
+                    <SelectTrigger className="h-10 border-primary/20">
+                      <SelectValue placeholder="Expiration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="never">Never expire</SelectItem>
+                      <SelectItem value="minutes">Minutes</SelectItem>
+                      <SelectItem value="hours">Hours</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {expirationType !== 'never' && (
+                    <Input
+                      type="number"
+                      placeholder="Value"
+                      value={expirationValue || ''}
+                      onChange={(e) => setExpirationValue(parseInt(e.target.value) || 0)}
+                      className="h-10 w-24 border-primary/20"
+                      min="1"
+                    />
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Set when your link should expire (optional)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {shortenedUrl && (
+            <Card className="border-success/20 bg-success/5 animate-fade-in">
+              <CardContent className="pt-6">
+                <div className="space-y-3">
+                  <p className="text-sm font-medium text-success flex items-center gap-2">
+                    <Sparkles className="w-4 h-4" />
+                    Your Zagurl link is ready!
+                  </p>
+                  <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
+                    <span className="flex-1 font-mono text-sm break-all">
+                      {shortenedUrl}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="gap-2 shrink-0 hover-scale"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="w-4 h-4 text-success" />
+                          Copied
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-4 h-4" />
+                          Copy
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          <div className="flex items-center justify-center gap-8 pt-4 border-t border-primary/10">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <TrendingUp className="w-4 h-4 text-success" />
+              <span>Free forever</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4 text-primary" />
+              <span>Ultra-fast (&lt;150ms)</span>
+            </div>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <BarChart3 className="w-4 h-4 text-accent-foreground" />
+              <span>Analytics included</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
