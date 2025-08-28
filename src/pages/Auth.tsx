@@ -396,9 +396,7 @@ const Auth = () => {
           </CardFooter>
         </Card>
         
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p> {new Date().getFullYear()} EverLink. All rights reserved.</p>
-        </div>
+        {/* Footer intentionally removed on auth page */}
       </div>
     </div>
   );

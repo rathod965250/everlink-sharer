@@ -9,6 +9,16 @@ export default function WebsiteUrlShortener() {
         <meta name="description" content="Shorten links securely with ShortenURL, the best website URL shortener site. Free, fast, and secure with custom alias and expiration." />
         <link rel="canonical" href="https://goshortenurl.xyz/website-url-shortener" />
         <meta name="keywords" content="site to shorten url, website url shortener, url shortener site, shorten links, short url" />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: [
+            { "@type": "Question", name: "Is ShortenURL free?", acceptedAnswer: { "@type": "Answer", text: "Yes. You can shorten unlimited links for free without creating an account." }},
+            { "@type": "Question", name: "Can I customize my link?", acceptedAnswer: { "@type": "Answer", text: "Yes. Set a custom alias when you shorten a link to make it more memorable." }},
+            { "@type": "Question", name: "Do links expire?", acceptedAnswer: { "@type": "Answer", text: "You choose. Links can last forever or expire after a set time." }},
+            { "@type": "Question", name: "Is it secure?", acceptedAnswer: { "@type": "Answer", text: "Yes. We use HTTPS and support expiring links to reduce unwanted sharing." }}
+          ]
+        })}</script>
       </Helmet>
 
       <header className="mb-8">
@@ -93,6 +103,7 @@ export default function WebsiteUrlShortener() {
       <div className="text-center">
         <Link to="/" className="inline-block px-5 py-2 rounded-md bg-[#804DE0] text-white hover:bg-[#6d3fc0]">Shorten a link now</Link>
       </div>
+      <p className="text-xs text-zinc-500 mt-6 text-center">Last updated: {new Date().toISOString().slice(0,10)}</p>
     </div>
   );
 }

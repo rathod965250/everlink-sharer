@@ -8,6 +8,12 @@ import WebsiteUrlShortener from "./pages/WebsiteUrlShortener";
 import UrlCompressor from "./pages/UrlCompressor";
 import TinyLink from "./pages/TinyLink";
 import Analytics from "./pages/Analytics";
+import ShortenMyUrl from "./pages/ShortenMyUrl";
+import ShortenLinks from "./pages/ShortenLinks";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
 import Auth from "./pages/Auth";
 import AuthCallback from "./pages/AuthCallback";
 import { LinkRedirect } from "@/components/LinkRedirect";
@@ -29,6 +35,12 @@ const App = () => (
             <Route path="/website-url-shortener" element={<WebsiteUrlShortener />} />
             <Route path="/url-compressor" element={<UrlCompressor />} />
             <Route path="/tiny-link" element={<TinyLink />} />
+            <Route path="/shorten-my-url" element={<ShortenMyUrl />} />
+            <Route path="/shorten-links" element={<ShortenLinks />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
             <Route 

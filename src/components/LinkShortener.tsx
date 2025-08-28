@@ -7,6 +7,7 @@ import { Link2, Copy, Check, TrendingUp, BarChart3, Zap, Shield, Clock, Sparkles
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Helmet } from "react-helmet-async";
+import QRCode from 'qrcode';
 interface LinkShortenerProps {
   user?: any;
 }
@@ -20,6 +21,7 @@ export const LinkShortener = ({
   const [isLoading, setIsLoading] = useState(false);
   const [shortenedUrl, setShortenedUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState("");
   const {
     toast
   } = useToast();
@@ -81,6 +83,10 @@ export const LinkShortener = ({
       });
       return;
     }
+    // Reset previous results to avoid stale UI
+    setQrDataUrl("");
+    setShortenedUrl("");
+    setCopied(false);
     setIsLoading(true);
     try {
       const expiresAt = calculateExpirationDate();
@@ -153,6 +159,14 @@ export const LinkShortener = ({
 
       const shortUrl = `${window.location.origin}/${shortCode}`;
       setShortenedUrl(shortUrl);
+      // Generate QR code image for the shortened URL (non-blocking feel)
+      try {
+        const dataUrl = await QRCode.toDataURL(shortUrl, { width: 256, margin: 1 });
+        setQrDataUrl(dataUrl);
+      } catch (e) {
+        console.warn('QR generation failed', e);
+        setQrDataUrl("");
+      }
       toast({
         title: "✨ Link shortened successfully!",
         description: `Your ShortenURL link is ready to use${expiresAt ? ` and expires in ${expirationValue} ${expirationType}` : ''}`
@@ -172,6 +186,8 @@ export const LinkShortener = ({
         description: friendly,
         variant: "destructive"
       });
+      // Ensure QR from previous run does not linger
+      setQrDataUrl("");
     } finally {
       setIsLoading(false);
     }
@@ -364,6 +380,33 @@ export const LinkShortener = ({
                         </>}
                     </Button>
                   </div>
+                  {qrDataUrl && (
+                    <div className="flex flex-col items-center gap-3 pt-2">
+                      <img src={qrDataUrl} alt="QR code for shortened link" className="w-40 h-40 bg-white p-2 rounded-md border" />
+                      <div className="flex gap-2">
+                        <a href={qrDataUrl} download={`short-link-qr.png`} className="inline-flex">
+                          <Button variant="outline" size="sm">Download QR</Button>
+                        </a>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              const dataUrl = await QRCode.toDataURL(shortenedUrl, { width: 512, margin: 1 });
+                              const a = document.createElement('a');
+                              a.href = dataUrl;
+                              a.download = 'short-link-qr@2x.png';
+                              a.click();
+                            } catch (e) {
+                              console.warn('High-res download failed', e);
+                            }
+                          }}
+                        >
+                          Download @2x
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>}
