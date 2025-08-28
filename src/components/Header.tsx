@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { User, LogOut, BarChart3, Link, Zap, Shield, Clock } from "lucide-react";
+import { User, LogOut, BarChart3, Link } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 interface HeaderProps {
   user: any;
@@ -23,25 +23,9 @@ export const Header = ({
             </div>
             <div>
               <h1 className="bg-gradient-to-r from-primary to-primary-glow bg-clip-text text-2xl font-bold text-violet-500">
-                Zagurl
+                ShortenURL
               </h1>
               <p className="-mt-1 text-slate-950 text-xs font-medium">Free Forever • No Signup Needed</p>
-            </div>
-          </div>
-
-          {/* Feature Badges */}
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex items-center space-x-1 text-sm text-success font-medium">
-              <Zap className="h-4 w-4" />
-              <span>Fast</span>
-            </div>
-            <div className="flex items-center space-x-1 text-sm text-primary font-medium">
-              <Shield className="h-4 w-4" />
-              <span>Secure</span>
-            </div>
-            <div className="flex items-center space-x-1 text-sm text-accent-foreground font-medium">
-              <Clock className="h-4 w-4" />
-              <span>FREE</span>
             </div>
           </div>
 

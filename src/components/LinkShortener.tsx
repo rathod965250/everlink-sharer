@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Link2, Copy, Check, TrendingUp, BarChart3, Zap, Shield, Clock, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { Helmet } from "react-helmet-async";
 interface LinkShortenerProps {
   user?: any;
 }
@@ -82,10 +83,29 @@ export const LinkShortener = ({
     }
     setIsLoading(true);
     try {
-      let shortCode;
-      if (customAlias.trim()) {
+      const expiresAt = calculateExpirationDate();
+
+      // Helper to perform the insert
+      const insertLink = async (code: string) => {
+        return await supabase
+          .from('links')
+          .insert({
+            short_code: code,
+            original_url: url,
+            user_id: user?.id || null,
+            expires_at: expiresAt?.toISOString() || null,
+            expiration_type: expirationType,
+            expiration_value: expirationType === 'never' ? 0 : expirationValue
+          })
+          .select()
+          .single();
+      };
+
+      let shortCode = customAlias.trim();
+
+      if (shortCode) {
         // Validate custom alias format
-        if (!/^[A-Za-z0-9_-]+$/.test(customAlias.trim())) {
+        if (!/^[A-Za-z0-9_-]+$/.test(shortCode)) {
           toast({
             title: "Invalid alias",
             description: "Alias can only contain letters, numbers, hyphens, and underscores",
@@ -95,60 +115,61 @@ export const LinkShortener = ({
           return;
         }
 
-        // Check if custom alias already exists
-        const {
-          data: existing
-        } = await supabase.from('links').select('short_code').eq('short_code', customAlias.trim()).single();
-        if (existing) {
-          toast({
-            title: "Alias already taken",
-            description: "This custom alias is already in use. Please choose another one.",
-            variant: "destructive"
-          });
+        const { error } = await insertLink(shortCode);
+        if (error) {
+          const msg = (error as any)?.message || String(error);
+          if (/duplicate key value|unique constraint/i.test(msg)) {
+            toast({
+              title: "Alias already taken",
+              description: "This custom alias is already in use. Please choose another one.",
+              variant: "destructive"
+            });
+          } else {
+            throw error;
+          }
           setIsLoading(false);
           return;
         }
-        shortCode = customAlias.trim();
       } else {
-        // Generate random short code
-        shortCode = generateShortCode();
-
-        // Check if short code already exists, regenerate if needed
-        let {
-          data: existing
-        } = await supabase.from('links').select('short_code').eq('short_code', shortCode).single();
-        while (existing) {
+        // Generate and attempt insert until success or max attempts
+        const maxAttempts = 7;
+        let attempt = 0;
+        while (attempt < maxAttempts) {
           shortCode = generateShortCode();
-          const {
-            data: newExisting
-          } = await supabase.from('links').select('short_code').eq('short_code', shortCode).single();
-          existing = newExisting;
+          const { error } = await insertLink(shortCode);
+          if (!error) break;
+          const msg = (error as any)?.message || String(error);
+          if (/duplicate key value|unique constraint/i.test(msg)) {
+            attempt++;
+            continue; // regenerate and retry
+          }
+          // Other errors: throw to outer catch
+          throw error;
+        }
+        if (attempt >= maxAttempts) {
+          throw new Error('Failed to generate a unique code. Please try again.');
         }
       }
-      const expiresAt = calculateExpirationDate();
-      const {
-        data,
-        error
-      } = await supabase.from('links').insert({
-        short_code: shortCode,
-        original_url: url,
-        user_id: user?.id || null,
-        expires_at: expiresAt?.toISOString() || null,
-        expiration_type: expirationType,
-        expiration_value: expirationType === 'never' ? 0 : expirationValue
-      }).select().single();
-      if (error) throw error;
+
       const shortUrl = `${window.location.origin}/${shortCode}`;
       setShortenedUrl(shortUrl);
       toast({
         title: "✨ Link shortened successfully!",
-        description: `Your Zagurl link is ready to use${expiresAt ? ` and expires in ${expirationValue} ${expirationType}` : ''}`
+        description: `Your ShortenURL link is ready to use${expiresAt ? ` and expires in ${expirationValue} ${expirationType}` : ''}`
       });
     } catch (error) {
       console.error('Error shortening link:', error);
+      // Provide clearer messages (RLS/duplicate/validation)
+      const msg = (error as any)?.message || String(error);
+      let friendly = msg;
+      if (/row-level security|permission denied/i.test(msg)) {
+        friendly = 'Permission denied by database policy. Please sign in before shortening links.';
+      } else if (/duplicate key value|unique constraint/i.test(msg)) {
+        friendly = 'Alias already exists. Try another custom alias.';
+      }
       toast({
         title: "Error",
-        description: "Failed to shorten the link. Please try again.",
+        description: friendly,
         variant: "destructive"
       });
     } finally {
@@ -157,102 +178,167 @@ export const LinkShortener = ({
   };
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(shortenedUrl);
+      // Try the modern clipboard API first
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shortenedUrl);
+      } else {
+        // Fallback for older browsers or insecure contexts
+        const textArea = document.createElement('textarea');
+        textArea.value = shortenedUrl;
+        
+        // Make the textarea out of viewport
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        // Execute the copy command
+        const successful = document.execCommand('copy');
+        if (!successful) {
+          throw new Error('Copy command failed');
+        }
+        
+        // Clean up
+        document.body.removeChild(textArea);
+      }
+      
       setCopied(true);
       toast({
         title: "Copied!",
-        description: "Shortened link copied to clipboard."
+        description: "Shortened link copied to clipboard.",
+        duration: 2000
       });
+      
+      // Reset the copied state after 2 seconds
       setTimeout(() => setCopied(false), 2000);
     } catch (error) {
+      console.error('Copy failed:', error);
+      // Fallback: Show the URL in an alert so user can copy manually
+      window.prompt('Copy to clipboard: Ctrl+C, Enter', shortenedUrl);
+      
       toast({
-        title: "Copy failed",
-        description: "Please copy the link manually.",
+        title: "Copy to clipboard failed",
+        description: "The link has been selected. Press Ctrl+C to copy.",
         variant: "destructive"
       });
     }
   };
-  return <div className="w-full max-w-4xl mx-auto space-y-8 animate-fade-in">
+  return (
+    <>
+      <Helmet>
+        <title>ShortenURL — Shorten my URL fast | Free Link Shortener</title>
+        <meta name="description" content="Shorten links instantly. Shorten my URL, compress long links, create tiny links — free, fast, and secure website URL shortener." />
+        <link rel="canonical" href="https://goshortenurl.xyz/" />
+        <meta property="og:title" content="ShortenURL — Free URL Shortener" />
+        <meta property="og:description" content="Shorten link in seconds. Free and secure URL shortener with custom alias and expiration." />
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://goshortenurl.xyz/" />
+        <meta name="twitter:title" content="ShortenURL — Free URL Shortener" />
+        <meta name="twitter:description" content="Shorten links fast. No signup required." />
+        <meta name="keywords" content="shorten my url, shorten links, shorten link, short my url, site to shorten url, website url shortener, url shortener site, url compressor, tiny link, shorten url, link shortener, short url" />
+      </Helmet>
+      <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8">
       {/* Hero Section */}
-      <div className="text-center space-y-6 py-8">
-        <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-primary-glow/20 to-primary/20 blur-3xl"></div>
-          <div className="relative space-y-4">
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-primary-glow to-primary bg-clip-text text-transparent">
-              Zagurl
-            </h1>
-            <p className="text-xl md:text-2xl max-w-2xl mx-auto text-slate-950">
-              Transform your long URLs into <span className="text-primary font-semibold">short, memorable links</span> that never expire
-            </p>
-            <div className="flex flex-wrap items-center justify-center gap-6 text-sm font-medium">
-              <div className="flex items-center gap-2 text-success">
-                <Zap className="h-5 w-5" />
-                <span>Lightning Fast</span>
-              </div>
-              <div className="flex items-center gap-2 text-primary">
-                <Shield className="h-5 w-5" />
-                <span>Secure & Reliable</span>
-              </div>
-              <div className="flex items-center gap-2 text-accent-foreground">
-                <Sparkles className="h-5 w-5" />
-                <span>FREE Forever</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      <div className="text-center mb-10">
+        <h1 className="text-2xl xs:text-3xl sm:text-4xl font-bold text-gray-900 mb-3 sm:mb-4">
+          Free URL Shortener
+        </h1>
+        <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto px-2">
+          Create short links, QR codes, and track clicks. No signup required.
+        </p>
       </div>
 
-      <Card className="bg-gradient-to-br from-card via-card to-secondary/20 border-primary/20 glow-effect hover-scale">
-        <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-primary to-primary-glow rounded-2xl flex items-center justify-center glow-effect bg-violet-500">
-            <Link2 className="w-8 h-8 text-primary-foreground" />
-          </div>
-          <div className="space-y-2">
-            <CardTitle className="text-3xl bg-gradient-to-r from-primary to-primary-glow bg-clip-text font-bold text-violet-500">
-              Get Your Free Link
+      {/* Main Card */}
+      <Card className="bg-white border border-gray-200 shadow-lg rounded-lg sm:rounded-xl overflow-hidden">
+        <CardHeader className="pb-3 sm:pb-4 pt-4 sm:pt-6 px-4 sm:px-6">
+          <div className="flex flex-col items-center">
+            <div className="w-14 h-14 bg-[#804DE0] rounded-xl flex items-center justify-center shadow-md mb-3">
+              <Link2 className="w-6 h-6 text-white" />
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-900">
+              Shorten Your Link
             </CardTitle>
-            <CardDescription className="text-lg text-zinc-900">
-              No registration required • Custom aliases available • Analytics included
-            </CardDescription>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="px-4 sm:px-6 pb-4 sm:pb-6">
           <div className="space-y-4">
-            <div className="flex gap-2">
-              <Input type="url" placeholder="Enter your long URL here..." value={url} onChange={e => setUrl(e.target.value)} className="flex-1 h-12 text-base border-primary/20 focus:border-primary/40" onKeyPress={e => e.key === 'Enter' && shortenLink()} />
-              <Button onClick={shortenLink} disabled={isLoading} className="h-12 px-8 bg-gradient-to-r from-primary to-primary-glow hover:from-primary/90 hover:to-primary-glow/90 glow-effect font-medium">
-                {isLoading ? "Shortening..." : "Get My Link FREE"}
+            <div className="flex flex-col xs:flex-row gap-3">
+              <div className="relative flex-1 w-full">
+                <Input 
+                  type="url" 
+                  placeholder="Paste your long URL here..." 
+                  value={url} 
+                  onChange={e => setUrl(e.target.value)}
+                  className="pl-10 h-12 text-sm sm:text-base border-gray-200 focus:border-[#804DE0] focus:ring-2 focus:ring-[#804DE0]/20 w-full"
+                  onKeyPress={e => e.key === 'Enter' && shortenLink()}
+                />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Link2 className="h-5 w-5 text-gray-400" />
+                </div>
+              </div>
+              <Button 
+                onClick={shortenLink} 
+                disabled={isLoading} 
+                className="h-12 w-full xs:w-auto px-4 sm:px-6 bg-[#804DE0] hover:bg-[#6d3fc0] text-white font-medium transition-colors text-sm sm:text-base"
+              >
+                {isLoading ? "Shortening..." : "Shorten URL"}
               </Button>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Input type="text" placeholder="Custom alias (optional) - e.g., myblog" value={customAlias} onChange={e => setCustomAlias(e.target.value)} className="h-10 text-sm border-primary/20 focus:border-primary/40" />
-                <p className="text-xs text-muted-foreground">
-                  Create a memorable custom alias or leave empty for auto-generation
-                </p>
-              </div>
-              
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <Select value={expirationType} onValueChange={setExpirationType}>
-                    <SelectTrigger className="h-10 border-primary/20">
-                      <SelectValue placeholder="Expiration" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="never">Never expire</SelectItem>
-                      <SelectItem value="minutes">Minutes</SelectItem>
-                      <SelectItem value="hours">Hours</SelectItem>
-                      <SelectItem value="days">Days</SelectItem>
-                      <SelectItem value="months">Months</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {expirationType !== 'never' && <Input type="number" placeholder="Value" value={expirationValue || ''} onChange={e => setExpirationValue(parseInt(e.target.value) || 0)} className="h-10 w-24 border-primary/20" min="1" />}
+            <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-100">
+              <h3 className="text-sm font-medium text-gray-700 mb-3">Advanced Options</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Custom Alias
+                  </label>
+                  <Input 
+                    type="text" 
+                    placeholder="myblog" 
+                    value={customAlias} 
+                    onChange={e => setCustomAlias(e.target.value)} 
+                    className="h-10 text-sm border-gray-200 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Example: {window.location.host}/{customAlias || 'myalias'}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Set when your link should expire (optional)
-                </p>
+                
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Link Expiration
+                  </label>
+                  <div className="flex gap-2">
+                    <Select value={expirationType} onValueChange={setExpirationType}>
+                      <SelectTrigger className="h-10 border-gray-200 bg-white">
+                        <SelectValue placeholder="Never expire" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="never">Never expire</SelectItem>
+                        <SelectItem value="minutes">Minutes</SelectItem>
+                        <SelectItem value="hours">Hours</SelectItem>
+                        <SelectItem value="days">Days</SelectItem>
+                        <SelectItem value="months">Months</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {expirationType !== 'never' && (
+                      <Input 
+                        type="number" 
+                        placeholder="1" 
+                        value={expirationValue || ''} 
+                        onChange={e => setExpirationValue(parseInt(e.target.value) || 0)} 
+                        className="h-10 w-20 border-gray-200 bg-white"
+                        min="1"
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {expirationType === 'never' ? 'This link will never expire' : `Link will expire after ${expirationValue || 1} ${expirationType}`}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -262,7 +348,7 @@ export const LinkShortener = ({
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-success flex items-center gap-2">
                     <Sparkles className="w-4 h-4" />
-                    Your Zagurl link is ready!
+                    Your ShortenURL link is ready!
                   </p>
                   <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
                     <span className="flex-1 font-mono text-sm break-all">
@@ -282,21 +368,23 @@ export const LinkShortener = ({
               </CardContent>
             </Card>}
 
-          <div className="flex items-center justify-center gap-8 pt-4 border-t border-primary/10">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <TrendingUp className="w-4 h-4 text-success" />
+          <div className="flex items-center justify-center gap-4 sm:gap-8 pt-4 border-t border-gray-100 mt-6">
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <TrendingUp className="w-4 h-4 text-green-500" />
               <span>Free forever</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="w-4 h-4 text-primary" />
-              <span>Ultra-fast (&lt;150ms)</span>
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <Zap className="w-4 h-4 text-yellow-500" />
+              <span>Ultra-fast</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <BarChart3 className="w-4 h-4 text-accent-foreground" />
-              <span>Analytics included</span>
+            <div className="hidden sm:flex items-center gap-2 text-sm text-gray-500">
+              <BarChart3 className="w-4 h-4 text-blue-500" />
+              <span>Analytics</span>
             </div>
           </div>
         </CardContent>
       </Card>
-    </div>;
+    </div>
+  </>
+);
 };
