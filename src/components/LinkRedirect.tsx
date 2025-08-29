@@ -47,13 +47,24 @@ export const LinkRedirect = () => {
         supabase
           .from('links')
           .update({ clicks: (link.clicks || 0) + 1 })
-          .eq('short_code', code);
+          .eq('short_code', code)
+          .then(({ error }) => {
+            if (error) {
+              console.error('Failed to update click count:', error);
+            }
+          });
 
         setIsLoading(false);
 
         // Immediate redirect for optimal performance (<150ms) without history entry
         setTimeout(() => {
-          window.location.replace(link.original_url);
+          try {
+            window.location.replace(link.original_url);
+          } catch (redirectError) {
+            console.error('Redirect failed:', redirectError);
+            // Fallback to window.open if replace fails
+            window.open(link.original_url, '_self');
+          }
         }, 100);
 
       } catch (error) {

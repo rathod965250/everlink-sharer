@@ -1,16 +1,9 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-// Get environment variables
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-
-// Validate environment variables
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  throw new Error(
-    'Missing Supabase configuration. Please check your .env file for VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY.'
-  );
-}
+// Use direct Supabase configuration for reliable deployment
+const SUPABASE_URL = "https://fqaneqqwdsmlfsbhtixq.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxYW5lcXF3ZHNtbGZzYmh0aXhxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYyMTc0ODIsImV4cCI6MjA3MTc5MzQ4Mn0.lwZ-Z-OA1ZLf_gobrZkCYBriR-Ec5UUMRpT_cyux2jQ";
 
 // Create and configure the Supabase client
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
