@@ -51,9 +51,9 @@ export const LinkRedirect = () => {
 
         setIsLoading(false);
 
-        // Immediate redirect for optimal performance (<150ms)
+        // Immediate redirect for optimal performance (<150ms) without history entry
         setTimeout(() => {
-          window.location.href = link.original_url;
+          window.location.replace(link.original_url);
         }, 100);
 
       } catch (error) {
@@ -135,7 +135,7 @@ export const LinkRedirect = () => {
               {originalUrl}
             </p>
             <Button 
-              onClick={() => window.location.href = originalUrl}
+              onClick={() => window.location.replace(originalUrl)}
               className="w-full gap-2"
             >
               <ExternalLink className="w-4 h-4" />
