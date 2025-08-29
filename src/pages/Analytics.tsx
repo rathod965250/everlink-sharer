@@ -31,9 +31,23 @@ const Analytics = () => {
   }, [user]);
 
   const fetchAnalytics = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log('No user found for analytics');
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log('Fetching analytics for user:', user.email, 'ID:', user.id);
+      
+      // Get fresh session to ensure authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.log('No valid session found');
+        setLoading(false);
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('links')
         .select('*')
@@ -42,9 +56,15 @@ const Analytics = () => {
 
       if (error) {
         console.error('Error fetching analytics:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data",
+          variant: "destructive",
+        });
         return;
       }
 
+      console.log('Fetched links:', data?.length || 0);
       setLinks(data || []);
       
       // Calculate total clicks
@@ -53,6 +73,11 @@ const Analytics = () => {
       
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load analytics",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

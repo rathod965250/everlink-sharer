@@ -83,26 +83,38 @@ export const LinkShortener = ({
       });
       return;
     }
+    
     // Reset previous results to avoid stale UI
     setQrDataUrl("");
     setShortenedUrl("");
     setCopied(false);
     setIsLoading(true);
+    
     try {
+      // Ensure we have the latest session before creating links
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUser = session?.user;
+      
+      console.log('Creating link with user:', currentUser?.email || 'anonymous');
+      
       const expiresAt = calculateExpirationDate();
 
       // Helper to perform the insert
       const insertLink = async (code: string) => {
+        const linkData = {
+          short_code: code,
+          original_url: url,
+          user_id: currentUser?.id || null,
+          expires_at: expiresAt?.toISOString() || null,
+          expiration_type: expirationType,
+          expiration_value: expirationType === 'never' ? 0 : expirationValue
+        };
+        
+        console.log('Inserting link data:', { ...linkData, user_id: linkData.user_id ? 'authenticated' : 'anonymous' });
+        
         return await supabase
           .from('links')
-          .insert({
-            short_code: code,
-            original_url: url,
-            user_id: user?.id || null,
-            expires_at: expiresAt?.toISOString() || null,
-            expiration_type: expirationType,
-            expiration_value: expirationType === 'never' ? 0 : expirationValue
-          })
+          .insert(linkData)
           .select()
           .single();
       };
