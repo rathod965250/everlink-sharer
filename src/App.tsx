@@ -20,6 +20,7 @@ import { LinkRedirect } from "@/components/LinkRedirect";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthProvider } from "@/hooks/useAuth";
 import NotFound from "./pages/NotFound";
+import Stats from "./pages/Stats";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +52,7 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
+            <Route path="/stats/:code" element={<Stats />} />
             <Route path="/:code" element={<LinkRedirect />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -49,7 +49,43 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
-      }
+      },
+      click_events: {
+        Row: {
+          id: number
+          short_code: string
+          referrer: string | null
+          user_agent: string | null
+          country: string | null
+          city: string | null
+          device: string | null
+          is_qr: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          short_code: string
+          referrer?: string | null
+          user_agent?: string | null
+          country?: string | null
+          city?: string | null
+          device?: string | null
+          is_qr?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          short_code?: string
+          referrer?: string | null
+          user_agent?: string | null
+          country?: string | null
+          city?: string | null
+          device?: string | null
+          is_qr?: boolean
+          created_at?: string
+        }
+        Relationships: []
+      },
       profiles: {
         Row: {
           created_at: string

@@ -173,7 +173,8 @@ export const LinkShortener = ({
       setShortenedUrl(shortUrl);
       // Generate QR code image for the shortened URL (non-blocking feel)
       try {
-        const dataUrl = await QRCode.toDataURL(shortUrl, { 
+        const shortUrlWithQr = `${shortUrl}?qr=1`;
+        const dataUrl = await QRCode.toDataURL(shortUrlWithQr, { 
           width: 256, 
           margin: 1,
           color: {
@@ -264,7 +265,8 @@ export const LinkShortener = ({
   const downloadQrPng = async (width: number, filename: string) => {
     try {
       if (!shortenedUrl) return;
-      const dataUrl = await QRCode.toDataURL(shortenedUrl, {
+      const target = `${shortenedUrl}?qr=1`;
+      const dataUrl = await QRCode.toDataURL(target, {
         width,
         margin: 1,
         color: { dark: '#000000', light: '#FFFFFF' },

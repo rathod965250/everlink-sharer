@@ -42,6 +42,21 @@ export default async function handler(req: Request) {
     }
 
     const location = link.original_url;
+    const isQr = url.searchParams.get('qr') === '1';
+
+    // Extract lightweight analytics signals
+    const headers = req.headers;
+    const referrer = headers.get('referer') || headers.get('referrer') || null;
+    const userAgent = headers.get('user-agent') || null;
+    const country = headers.get('x-vercel-ip-country') || null; // Vercel geo header
+    const city = headers.get('x-vercel-ip-city') || null; // Vercel geo header
+    const device = userAgent
+      ? /mobile|android|iphone|ipad|ipod/i.test(userAgent)
+        ? 'mobile'
+        : /tablet/i.test(userAgent)
+        ? 'tablet'
+        : 'desktop'
+      : null;
 
     // Fire-and-forget click increment (do not await)
     fetch(`${SUPABASE_URL}/rest/v1/links?short_code=eq.${encodeURIComponent(code)}`, {
@@ -53,6 +68,26 @@ export default async function handler(req: Request) {
         Prefer: 'return=minimal',
       },
       body: JSON.stringify({ clicks: (link.clicks || 0) + 1 }),
+    }).catch(() => {});
+
+    // Fire-and-forget analytics insert (do not await)
+    fetch(`${SUPABASE_URL}/rest/v1/click_events`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=ignore-duplicates,return=minimal',
+      },
+      body: JSON.stringify({
+        short_code: code,
+        referrer,
+        user_agent: userAgent,
+        country,
+        city,
+        device,
+        is_qr: isQr,
+      }),
     }).catch(() => {});
 
     // Perform an immediate redirect with no body
