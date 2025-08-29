@@ -378,7 +378,8 @@ export const LinkShortener = ({
             </div>
           </div>
 
-          {shortenedUrl && <Card className="border-success/20 bg-success/5 animate-fade-in">
+          {shortenedUrl && (
+            <Card className="border-success/20 bg-success/5 animate-fade-in mt-4">
               <CardContent className="pt-6">
                 <div className="space-y-3">
                   <p className="text-sm font-medium text-success flex items-center gap-2">
@@ -386,82 +387,30 @@ export const LinkShortener = ({
                     Your ShortenURL link is ready!
                   </p>
                   <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
-                    <span className="flex-1 font-mono text-sm break-all">
-                      {shortenedUrl}
-                    </span>
-                    <Button variant="ghost" size="sm" onClick={copyToClipboard} className="gap-2 shrink-0 hover-scale">
-                      {copied ? <>
+                    <span className="flex-1 font-mono text-sm break-all">{shortenedUrl}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="gap-2 shrink-0 hover-scale"
+                    >
+                      {copied ? (
+                        <>
                           <Check className="w-4 h-4 text-success" />
                           Copied
-                        </> : <>
+                        </>
+                      ) : (
+                        <>
                           <Copy className="w-4 h-4" />
                           Copy
-                        </>}
+                        </>
+                      )}
                     </Button>
-                      <div className="flex gap-2">
-                        <Select value={expirationType} onValueChange={setExpirationType}>
-                          <SelectTrigger className="h-10 border-gray-200 bg-white">
-                            <SelectValue placeholder="Never expire" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="never">Never expire</SelectItem>
-                            <SelectItem value="minutes">Minutes</SelectItem>
-                            <SelectItem value="hours">Hours</SelectItem>
-                            <SelectItem value="days">Days</SelectItem>
-                            <SelectItem value="months">Months</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {expirationType !== 'never' && (
-                          <Input 
-                            type="number" 
-                            placeholder="1" 
-                            value={expirationValue || ''} 
-                            onChange={e => setExpirationValue(parseInt(e.target.value) || 0)} 
-                            className="h-10 w-20 border-gray-200 bg-white"
-                            min="1"
-                          />
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {expirationType === 'never' ? 'This link will never expire' : `Link will expire after ${expirationValue || 1} ${expirationType}`}
-                      </p>
-                    </div>
                   </div>
                 </div>
-              </div>
-
-              {shortenedUrl && <Card className="border-success/20 bg-success/5 animate-fade-in">
-                  <CardContent className="pt-6">
-                    <div className="space-y-3">
-                      <p className="text-sm font-medium text-success flex items-center gap-2">
-                        <Sparkles className="w-4 h-4" />
-                        Your ShortenURL link is ready!
-                      </p>
-                      <div className="flex items-center gap-2 p-3 bg-background rounded-lg border">
-                        <span className="flex-1 font-mono text-sm break-all">
-                          {shortenedUrl}
-                        </span>
-                        <Button variant="ghost" size="sm" onClick={copyToClipboard} className="gap-2 shrink-0 hover-scale">
-                          {copied ? <>
-                              <Check className="w-4 h-4 text-success" />
-                              Copied
-                            </> : <>
-                              <Copy className="w-4 h-4" />
-                              Copy
-                            </>}
-                                variant: "destructive",
-                              });
-                            }
-                          }}
-                        >
-                          Download @2x
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
               </CardContent>
-            </Card>}
+            </Card>
+          )}
 
           <div className="flex items-center justify-center gap-4 sm:gap-8 pt-4 border-t border-gray-100 mt-6">
             <div className="flex items-center gap-2 text-sm text-gray-500">
