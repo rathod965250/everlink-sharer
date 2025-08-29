@@ -1,24 +1,21 @@
 {
-  "routes": [
-    { "src": "/favicon\\.(ico|svg)", "dest": "/favicon.$1" },
-    { "src": "/robots\\.txt", "dest": "/robots.txt" },
-    { "src": "/sitemap\\.xml", "dest": "/sitemap.xml" },
+  "rewrites": [
+    { "source": "/about", "destination": "/index.html" },
+    { "source": "/contact", "destination": "/index.html" },
+    { "source": "/privacy", "destination": "/index.html" },
+    { "source": "/terms", "destination": "/index.html" },
+    { "source": "/auth", "destination": "/index.html" },
+    { "source": "/auth/callback", "destination": "/index.html" },
+    { "source": "/analytics", "destination": "/index.html" },
+    { "source": "/website-url-shortener", "destination": "/index.html" },
+    { "source": "/url-compressor", "destination": "/index.html" },
+    { "source": "/tiny-link", "destination": "/index.html" },
+    { "source": "/shorten-my-url", "destination": "/index.html" },
+    { "source": "/shorten-links", "destination": "/index.html" },
 
-    { "src": "/about", "dest": "/index.html" },
-    { "src": "/contact", "dest": "/index.html" },
-    { "src": "/privacy", "dest": "/index.html" },
-    { "src": "/terms", "dest": "/index.html" },
-    { "src": "/auth(?:/callback)?", "dest": "/index.html" },
-    { "src": "/analytics", "dest": "/index.html" },
-    { "src": "/website-url-shortener", "dest": "/index.html" },
-    { "src": "/url-compressor", "dest": "/index.html" },
-    { "src": "/tiny-link", "dest": "/index.html" },
-    { "src": "/shorten-my-url", "dest": "/index.html" },
-    { "src": "/shorten-links", "dest": "/index.html" },
+    { "source": "/:code([A-Za-z0-9_-]{3,64})", "destination": "/api/r/:code" },
 
-    { "src": "/([A-Za-z0-9_-]{3,64})", "dest": "/api/r/$1" },
-
-    { "src": "/.*", "dest": "/index.html" }
+    { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
