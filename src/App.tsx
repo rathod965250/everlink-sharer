@@ -1,13 +1,14 @@
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Analytics } from '@vercel/analytics/react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import WebsiteUrlShortener from "./pages/WebsiteUrlShortener";
 import UrlCompressor from "./pages/UrlCompressor";
 import TinyLink from "./pages/TinyLink";
-import Analytics from "./pages/Analytics";
+import AnalyticsPage from "./pages/Analytics";
 import ShortenMyUrl from "./pages/ShortenMyUrl";
 import ShortenLinks from "./pages/ShortenLinks";
 import About from "./pages/About";
@@ -29,6 +30,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <Analytics />
       <BrowserRouter>
         <AuthProvider>
           <Routes>
@@ -48,7 +50,7 @@ const App = () => (
               path="/analytics" 
               element={
                 <ProtectedRoute>
-                  <Analytics />
+                  <AnalyticsPage />
                 </ProtectedRoute>
               } 
             />
