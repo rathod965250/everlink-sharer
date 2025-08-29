@@ -161,7 +161,14 @@ export const LinkShortener = ({
       setShortenedUrl(shortUrl);
       // Generate QR code image for the shortened URL (non-blocking feel)
       try {
-        const dataUrl = await QRCode.toDataURL(shortUrl, { width: 256, margin: 1 });
+        const dataUrl = await QRCode.toDataURL(shortUrl, { 
+          width: 256, 
+          margin: 1,
+          color: {
+            dark: '#000000',
+            light: '#FFFFFF'
+          }
+        });
         setQrDataUrl(dataUrl);
       } catch (e) {
         console.warn('QR generation failed', e);
@@ -384,7 +391,7 @@ export const LinkShortener = ({
                     <div className="flex flex-col items-center gap-3 pt-2">
                       <img src={qrDataUrl} alt="QR code for shortened link" className="w-40 h-40 bg-white p-2 rounded-md border" />
                       <div className="flex gap-2">
-                        <a href={qrDataUrl} download={`short-link-qr.png`} className="inline-flex">
+                        <a href={qrDataUrl} download={`zagurl-qr-code.png`} className="inline-flex">
                           <Button variant="outline" size="sm">Download QR</Button>
                         </a>
                         <Button
@@ -392,13 +399,25 @@ export const LinkShortener = ({
                           size="sm"
                           onClick={async () => {
                             try {
-                              const dataUrl = await QRCode.toDataURL(shortenedUrl, { width: 512, margin: 1 });
+                              const dataUrl = await QRCode.toDataURL(shortenedUrl, { 
+                                width: 512, 
+                                margin: 1,
+                                color: {
+                                  dark: '#000000',
+                                  light: '#FFFFFF'
+                                }
+                              });
                               const a = document.createElement('a');
                               a.href = dataUrl;
-                              a.download = 'short-link-qr@2x.png';
+                              a.download = 'zagurl-qr-code-hd.png';
                               a.click();
                             } catch (e) {
                               console.warn('High-res download failed', e);
+                              toast({
+                                title: "Error",
+                                description: "Failed to generate high-res QR code",
+                                variant: "destructive",
+                              });
                             }
                           }}
                         >
