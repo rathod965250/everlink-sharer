@@ -260,6 +260,26 @@ export const LinkShortener = ({
       });
     }
   };
+  // Generate and download QR code as PNG at a given resolution
+  const downloadQrPng = async (width: number, filename: string) => {
+    try {
+      if (!shortenedUrl) return;
+      const dataUrl = await QRCode.toDataURL(shortenedUrl, {
+        width,
+        margin: 1,
+        color: { dark: '#000000', light: '#FFFFFF' },
+      });
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (e) {
+      console.error('QR download failed', e);
+      toast({ title: 'QR download failed', description: 'Please try again.', variant: 'destructive' });
+    }
+  };
   return (
     <>
       <Helmet>
@@ -407,6 +427,29 @@ export const LinkShortener = ({
                       )}
                     </Button>
                   </div>
+                  {qrDataUrl && (
+                    <div className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-white rounded-lg border">
+                      <img
+                        src={qrDataUrl}
+                        alt="Shortened URL QR code"
+                        className="w-40 h-40 object-contain border rounded"
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          variant="secondary"
+                          onClick={() => downloadQrPng(256, 'shortenurl-qr-code.png')}
+                        >
+                          Download PNG
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => downloadQrPng(512, 'shortenurl-qr-code-hd.png')}
+                        >
+                          Download @2x
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
