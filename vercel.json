@@ -1,23 +1,32 @@
 {
-  "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+  "routes": [
+    { "src": "/favicon\\.(ico|svg)", "dest": "/favicon.$1" },
+    { "src": "/robots\\.txt", "dest": "/robots.txt" },
+    { "src": "/sitemap\\.xml", "dest": "/sitemap.xml" },
+
+    { "src": "/about", "dest": "/index.html" },
+    { "src": "/contact", "dest": "/index.html" },
+    { "src": "/privacy", "dest": "/index.html" },
+    { "src": "/terms", "dest": "/index.html" },
+    { "src": "/auth(?:/callback)?", "dest": "/index.html" },
+    { "src": "/analytics", "dest": "/index.html" },
+    { "src": "/website-url-shortener", "dest": "/index.html" },
+    { "src": "/url-compressor", "dest": "/index.html" },
+    { "src": "/tiny-link", "dest": "/index.html" },
+    { "src": "/shorten-my-url", "dest": "/index.html" },
+    { "src": "/shorten-links", "dest": "/index.html" },
+
+    { "src": "/([A-Za-z0-9_-]{3,64})", "dest": "/api/r/$1" },
+
+    { "src": "/.*", "dest": "/index.html" }
   ],
   "headers": [
     {
       "source": "/(.*)",
       "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "X-Frame-Options",
-          "value": "DENY"
-        },
-        {
-          "key": "X-XSS-Protection",
-          "value": "1; mode=block"
-        }
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "X-XSS-Protection", "value": "1; mode=block" }
       ]
     }
   ]
